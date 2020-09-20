@@ -1,2 +1,2 @@
-# kubernetes-training
-Kubernetes训练
+# Kubernetes-Training
+Kubernetes 知识库学习
