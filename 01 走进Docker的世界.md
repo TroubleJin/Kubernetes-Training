@@ -222,7 +222,7 @@ RUN apt-get update && apt install -y nginx
 #告诉docker，启动容器时执行如下命令
 CMD ["/usr/sbin/nginx", "-g","daemon off;"]
 ```
-### 1.5.5   常用操作 (Operation)
+### 1.5.5 常用操作 (Operation)
 ```
 #   拉去镜像
 docker pull nginx:alpine
