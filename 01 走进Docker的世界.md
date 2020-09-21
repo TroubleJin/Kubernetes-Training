@@ -100,7 +100,7 @@ docker-ce-cli.x86_64               1:19.03.13-3.el7               @docker-ce-sta
 
 容器和仓库不会直接交互，都是以镜像为载体来操作。
 
-### 1.5.4   编写DockerFile
+### 1.5.4 编写DockerFile
 
 - FROM 指定基础镜像，必须为第一个命令
 
