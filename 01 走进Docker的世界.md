@@ -23,6 +23,13 @@
   * [2.2 Host模式](#22-host--)
   * [2.3 Conatiner模式](#23-conatiner--)
   * [2.4 None模式](#24-none--)
+  
+  
+  |-- undefined
+    |-- .gitignore
+    |-- package-lock.json
+    |-- package.json
+    |-- _config.yml
 #   1. 走进Docker的世界
 ##  1.1 为什么用Docker
 -   提供轻量、高效的虚拟化能力
