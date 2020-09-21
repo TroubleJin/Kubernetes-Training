@@ -11,13 +11,13 @@
 - container容器之间相互隔离，且每个容器可以设置资源限额
 - 提供轻量级虚拟化功能，容器就是在宿主机中的一个个的虚拟的空间，彼此相互隔离，完全独立。
 - CS架构的软件产品
-![image](3E92355FFEFE4C5AA6FEE6CD615AC8C7)
+![avatar](img/day01-1.png)
 
 ##  1.3 Docker底层原理
 - runC（libcontainer）是符合OCI标准的一个实现，与底层系统交互
 - containerd是实现了OCI之上的容器的高级功能，比如镜像管理、容器执行的调用等
 - Dockerd目前是最上层与CLI交互的进程，接收cli的请求并与containerd协作
-![image](C3F99312A142413EA043642BB5CA2AD1)
+![avatar](img/day01-2.png)
 
 ##  1.4 Docker搭建
 ```
@@ -46,7 +46,7 @@ docker-ce-cli.x86_64               1:19.03.13-3.el7               @docker-ce-sta
 ```
 
 ##  1.5 Docker核心要素
-![image](A8FCC6B3C3B6435992214486DC5BF6B8)
+![avatar](img/day01-3.png)
 
 三大核心要素：镜像(Image)、容器(Container)、仓库(Registry)
 
@@ -380,7 +380,7 @@ cgroup.event_control   cpuacct.stat  cpuacct.usage_percpu  cpu.cfs_quota_us   cp
 ```
 -   编写c文件使cpu增高
 
-![image](5D49E4BDDFDA4EE5B0FC5DC537DE8B26)
+![avatar](img/day01-4.png)
 把该进程加入到我们限制的cgroup
 ```
 [root@k8s-master ~]# cat /sys/fs/cgroup/cpu/haoel/cpu.cfs_quota_us 
@@ -393,7 +393,7 @@ root     30161 30070  0 16:41 pts/0    00:00:00 grep -E --color=auto deadloop
 [root@k8s-master ~]#  echo 30131 >> /sys/fs/cgroup/cpu/haoel/tasks
 ```
 -   再次查看
-![image](A00CC09EAAC7415C93CA479C07E32F81)
+![avatar](img/day01-5.png)
 ```
 [root@k8s-master ~]# ll /sys/fs/cgroup/
 total 0
