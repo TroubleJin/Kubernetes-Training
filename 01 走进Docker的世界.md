@@ -18,10 +18,10 @@
 - [2. Docker网络](#2-docker--)
   * [2.1 bridge模式](#21-bridge--)
     + [2.1.1 清空所有容器](#211-------)
-    + [2.1.2   创建测试容器test1,test2](#212---------test1-test2)
+    + [2.1.2   创建测试容器test1,test2](#212-创建测试容器test1,test2)
     + [2.1.3   为什么能通信](#213---------)
-  * [2.2 Host模式](#22-host--)
-  * [2.3 Conatiner模式](#23-conatiner--)
+  * [2.2 Host模式](#22-Host模式)
+  * [2.3 Conatiner模式](#23-conatinerNone模式)
   * [2.4 None模式](#24-none模式)
   
 #   1. 走进Docker的世界
