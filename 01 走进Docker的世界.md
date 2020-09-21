@@ -1,16 +1,16 @@
 - [1. 走进Docker的世界](#1-走进Docker的世界)
-  * [1.1 为什么用Docker](#11-----docker)
-  * [1.2 Docker知识点](#12-docker---)
-  * [1.3 Docker底层原理](#13-docker----)
-  * [1.4 Docker搭建](#14-docker--)
-  * [1.5 Docker核心要素](#15-docker----)
-    + [1.5.1 镜像（Image）](#151----image-)
-    + [1.5.2 容器（Container）](#152----container-)
+  * [1.1 为什么用Docker](#11-为什么用Docker)
+  * [1.2 Docker知识点](#12-Docker知识点)
+  * [1.3 Docker底层原理](#13-Docker底层原理)
+  * [1.4 Docker搭建](#14-Docker搭建)
+  * [1.5 Docker核心要素](#15-Docker核心要素)
+    + [1.5.1 镜像（Image）](#151-镜像（Image）)
+    + [1.5.2 容器（Container）](#152-容器（Container）)
     + [1.5.3 仓库（Registry）](#153----registry-)
-    + [1.5.4   编写DockerFile](#154-----dockerfile)
-    + [1.5.5   常用操作 (Operation)](#155---------operation-)
-    + [1.5.6   理解容器本质](#156---------)
-    + [1.5.7   实践Django使用镜像启动](#157-----django------)
+    + [1.5.4 编写DockerFile](#154-----dockerfile)
+    + [1.5.5 常用操作 (Operation)](#155---------operation-)
+    + [1.5.6 理解容器本质](#156---------)
+    + [1.5.7 实践Django使用镜像启动](#157-----django------)
   * [1.6 实现原理](#16-----)
     + [1.6.1 Namespace 资源隔离](#161-namespace-----)
     + [1.6.2 CGroup 资源限制](#162-cgroup-----)
@@ -518,7 +518,7 @@ bridge name	bridge id		STP enabled	interfaces
 docker0		8000.02428c27984c	no
 
 ```
-### 2.1.2   创建测试容器test1,test2
+### 2.1.2 创建测试容器test1,test2
 ```
 [root@k8s-master ~]# docker run -d --name test1 nginx:alpine
 06a4b2969427cdb76a88532d6985adb172a00ba148bc1f02ea0bd0d31a9a1d34
@@ -554,7 +554,7 @@ fetch http://mirrors.tuna.tsinghua.edu.cn/alpine/v3.12/main/x86_64/APKINDEX.tar.
 fetch http://mirrors.tuna.tsinghua.edu.cn/alpine/v3.12/community/x86_64/APKINDEX.tar.gz
 / # curl  172.18.0.2
 ```
-### 2.1.3   为什么能通信
+### 2.1.3 为什么能通信
 ```
 / # route -n
 Kernel IP routing table
