@@ -22,7 +22,7 @@
     + [2.1.3   为什么能通信](#213---------)
   * [2.2 Host模式](#22-Host模式)
   * [2.3 Conatiner模式](#23-conatinerNone模式)
-  * [2.4 None模式](#24-none模式)
+  * [2.4 None模式](#24-None模式)
   
 #   1. 走进Docker的世界
 ##  1.1 为什么用Docker
