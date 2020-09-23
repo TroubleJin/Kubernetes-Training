@@ -739,12 +739,134 @@ $ ip netns exec $PID ip route add default via 172.18.0.1
 ```
 
 
+#3. Docker常用技巧
+##  3.1 清除多余的磁盘空间
+```
+docker system prune
+```
+
+## 3.2 Harbor仓库搭建
+-   https://github.com/goharbor/harbor
+### 3.2.1 安装Docker
+```
+[root@Harbor ~]# yum install -y docker
+[root@Harbor ~]# systemctl stop firewalld
+[root@Harbor ~]# systemctl start docker
+[root@Harbor ~]# systemctl status docker
+```
+### 3.2.2 安装Docker-Compose
+```
+[root@Harbor ~]# yum -y install epel-release
+[root@Harbor ~]# yum -y install python-pip
+[root@Harbor ~]# pip install --upgrade pip
+[root@Harbor ~]# pip --version
+[root@Harbor ~]# pip install docker-compose 
+[root@Harbor ~]# docker-compose version
+
+#   Curl安装
+curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+```
+### 3.2.3 安装golang
+```
+[root@Harbor ~]# wget https://dl.google.com/go/go1.10.3.linux-amd64.tar.gz
+#执行tar解压到/usr/loacl目录下，得到go文件夹
+[root@Harbor ~]# tar -C /usr/local -zxvf  go1.10.3.linux-amd64.tar.gz
+[root@Harbor ~]# vim /etc/profile
+export GOROOT=/usr/local/go
+export PATH=$PATH:$GOROOT/bin
+```
+### 3.2.4 安装Harbor
+```
+[root@Harbor ~]# unzip harbor-master.zip
+[root@Harbor ~]# cd harbor-master/make/
+[root@Harbor make]# ./checkenv.sh 
+
+Note: golang version: 1.10.3
+
+Note: docker version: 1.13.1
+
+Note: docker-compose version: 1.24.1
+
+[root@Harbor make]# yum update
+[root@Harbor make]# ./prepare
+```
+
+```
+harbor.0.5.0.tgz
+```
+-   版本过低安装失败
+```
+[root@Harbor make]# ./install.sh 
+
+[Step 0]: checking installation environment ...
+✖ Need to upgrade docker package to 17.06.0+.
+[root@Harbor make]# yum install -y yum-utils
+[root@Harbor make]# yum-config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+[root@Harbor make]# yum list docker-ce --showduplicates|sort -r
+
+```
+-   异常报错
+```
+Transaction check error:
+  file /usr/bin/docker from install of docker-ce-17.06.2.ce-1.el7.centos.x86_64 conflicts with file from package docker-common-2:1.13.1-102.git7f2769b.el7.centos.x86_64
+  file /usr/bin/docker-containerd from install of docker-ce-17.06.2.ce-1.el7.centos.x86_64 conflicts with file from package docker-common-2:1.13.1-102.git7f2769b.el7.centos.x86_64
+  file /usr/bin/docker-containerd-shim from install of docker-ce-17.06.2.ce-1.el7.centos.x86_64 conflicts with file from package docker-common-2:1.13.1-102.git7f2769b.el7.centos.x86_64
+  file /usr/bin/dockerd from install of docker-ce-17.06.2.ce-1.el7.centos.x86_64 conflicts with file from package docker-common-2:1.13.1-102.git7f2769b.el7.centos.x86_64
+```
+-   卸载旧版本的Docker
+```
+[root@Harbor make]# yum remove docker -y
+[root@Harbor make]# yum erase docker-common-2:1.13.1-102.git7f2769b.el7.centos.x86_64
+[root@Harbor make]#  rm -fr /var/lib/docker
+[root@Harbor make]#  rm -fr /var/run/docker
+```
+-   安装新版本的Docker
+```
+[root@Harbor make]# yum install docker-ce-17.06.2.ce-1.el7.centos
+```
 
 
+##  3.3 更改已经启动的容器
+```
+docker container update --restart=always jms_koko
+```
 
+##  3.4 Docker修改网络
+```
+cat /etc/docker/daemon.json 
+{
+  "bip": "192.168.1.1/24"
+}
+```
 
+##  3.5 Docker更改存储位置
+```
+指定镜像和容器存放路径的参数是–graph=/var/lib/docker，我们只需要修改配置文件指定启动参数即可。
+Docker 的配置文件可以设置大部分的后台进程参数，在各个操作系统中的存放位置不一致，在 Ubuntu 中的位置是：/etc/default/docker，在 CentOS 中的位置是：/etc/sysconfig/docker。
+————————————————
+版权声明：本文为CSDN博主「wenwenxiong」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/wenwenxiong/article/details/78728696
+devops@hfq-dev-1:~$ cat /etc/default/docker 
+DOCKER_OPTS="--registry-mirror=https://registry.docker-cn.com"
+DOCKER_OPTS="-g /docker_data"
+```
+##  Docker显示全部执行命令
+```
+docker ps -a --no-trunc
+```
 
+##  Docker更改运行中容器的配置
+```
+docker update --cpuset-cpus 1 bc2b650f8b5a
+```
 
+##  Docker修改时间
+```
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+echo "Asia/Shanghai" > /etc/timezone
+```
 
 
 
