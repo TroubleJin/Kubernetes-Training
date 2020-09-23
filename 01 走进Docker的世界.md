@@ -23,7 +23,20 @@
   * [2.2 Host模式](#22-Host模式)
   * [2.3 Conatiner模式](#23-Conatiner模式)
   * [2.4 None模式](#24-None模式)
-  
+- [3 Docker常用技巧](#3-Docker常用技巧)
+  * [3.1 清除多余的磁盘空间](#31-清除多余的磁盘空间)
+  * [3.2 Harbor仓库搭建](#32-Harbor仓库搭建)
+    + [3.2.1 安装Docker](#321-安装Docker)
+    + [3.2.2 安装Docker-Compose](#322-安装Docker-Compose)
+    + [3.2.3 安装golang](#323-安装golang)
+    + [3.2.4 安装Harbor](#324-安装Harbor)
+  * [3.3 更改已经启动的容器](#33-更改已经启动的容器)
+  * [3.4 Docker修改网络](#34-Docker修改网络)
+  * [3.5 Docker更改存储位置](#35-Docker更改存储位置)
+  * [3.6 Docker显示全部执行命令](#36-Docker显示全部执行命令)
+  * [3.7 Docker更改运行中容器的配置](#37-Docker更改运行中容器的配置)
+  * [3.8 Docker修改时间](#38-Docker修改时间) 
+ 
 #   1. 走进Docker的世界
 ##  1.1 为什么用Docker
 -   提供轻量、高效的虚拟化能力
@@ -739,7 +752,7 @@ $ ip netns exec $PID ip route add default via 172.18.0.1
 ```
 
 
-#3. Docker常用技巧
+# 3 Docker常用技巧
 ##  3.1 清除多余的磁盘空间
 ```
 docker system prune
@@ -828,12 +841,12 @@ Transaction check error:
 ```
 
 
-##  3.3 更改已经启动的容器
+## 3.3 更改已经启动的容器
 ```
 docker container update --restart=always jms_koko
 ```
 
-##  3.4 Docker修改网络
+## 3.4 Docker修改网络
 ```
 cat /etc/docker/daemon.json 
 {
@@ -841,7 +854,7 @@ cat /etc/docker/daemon.json
 }
 ```
 
-##  3.5 Docker更改存储位置
+## 3.5 Docker更改存储位置
 ```
 指定镜像和容器存放路径的参数是–graph=/var/lib/docker，我们只需要修改配置文件指定启动参数即可。
 Docker 的配置文件可以设置大部分的后台进程参数，在各个操作系统中的存放位置不一致，在 Ubuntu 中的位置是：/etc/default/docker，在 CentOS 中的位置是：/etc/sysconfig/docker。
@@ -852,17 +865,17 @@ devops@hfq-dev-1:~$ cat /etc/default/docker
 DOCKER_OPTS="--registry-mirror=https://registry.docker-cn.com"
 DOCKER_OPTS="-g /docker_data"
 ```
-##  Docker显示全部执行命令
+## 3.6 Docker显示全部执行命令
 ```
 docker ps -a --no-trunc
 ```
 
-##  Docker更改运行中容器的配置
+## 3.7 Docker更改运行中容器的配置
 ```
 docker update --cpuset-cpus 1 bc2b650f8b5a
 ```
 
-##  Docker修改时间
+## 3.8 Docker修改时间
 ```
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 echo "Asia/Shanghai" > /etc/timezone
