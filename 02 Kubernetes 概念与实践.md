@@ -12,7 +12,7 @@
   * [2.4 实践--使用k8s管理业务应用](#24-实践--使用k8s管理业务应用)
   * [2.5 使用yaml格式定义Pod](#25-使用yaml格式定义Pod)
 
-#   1. Kubernetes 概念
+#   1. Kubernetes概念
 ##  1.1 纯容器模式的问题
 
 1. 业务容器数量庞大，哪些容器部署在哪些节点，使用了哪些端口，如何记录、管理，需要登录到每台机器去管理？
@@ -68,8 +68,8 @@ Docker Swarm       Mesos        Google Kubernetes
 3. 同时因为组件无状态，组件的升级，重启，故障等并不影响集群最终状态，只要组件恢复后就可以从中断处继续运行。
 4. 各个组件和kube-apiserver之间的数据推送都是通过list-watch机制来实现。
 
-#   2. Kubernetes 实践
-##  2.1 Kubernetes  查看组件
+#   2. Kubernetes实践
+##  2.1 Kubernetes查看组件
 ```
 [root@k8s-master ~]# kubectl get pod -n kube-system -o wide
 NAME                                 READY   STATUS    RESTARTS   AGE     IP              NODE          NOMINATED NODE   READINESS GATES
@@ -114,7 +114,7 @@ kubernetes-dashboard   Active   71m
 - 通常在项目使用的时候，我们会创建带有业务含义的namespace来做逻辑上的整合
 
 
-##  2.4 实践--使用k8s管理业务应用        
+##  2.4 使用k8s管理业务应用        
 **最小调度单元 Pod**
 
 docker调度的是容器，在k8s集群中，最小的调度单元是Pod（豆荚）
