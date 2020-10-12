@@ -55,7 +55,7 @@ Docker Swarm       Mesos        Google Kubernetes
  https://kubernetes.io/ 
  
 ##  1.3 架构图
-![image](F5D7D12EE73349448C124AE9706E2205)
+![avatar](img/day02-1.png)
 
 ##  1.4 核心组件
 - ETCD：分布式高性能键值数据库,存储整个集群的所有元数据
@@ -78,7 +78,7 @@ Docker Swarm       Mesos        Google Kubernetes
 - kubectl: 命令行接口，用于对 Kubernetes 集群运行命令  https://kubernetes.io/zh/docs/reference/kubectl/ 
 
 ##  1.5 工作流程
-![image](915E1D603CBF4D7285B8DBF9243BA15F)
+![avatar](img/day02-2.png)
 1. 用户准备一个资源文件（记录了业务应用的名称、镜像地址等信息），通过调用APIServer执行创建Pod
 2. APIServer收到用户的Pod创建请求，将Pod信息写入到etcd中
 3. 调度器通过list-watch的方式，发现有新的pod数据，但是这个pod还没有绑定到某一个节点中
@@ -756,7 +756,7 @@ Pod的状态如下表所示：
 | Unknown              | 由于某种原因无法获取该Pod的状态，可能由于网络通信不畅导致    |
 
 启动关闭示意图：
-![image](B2274777EDBF492195ADE3EFC0A6359C)
+![image](./img/day02-3.jpg)
 
 **验证pod生命周期**
 ```
@@ -822,7 +822,7 @@ sleep 10; echo $(date +%s): END >> /loap/timing;']
 ##  3.1 Workload
 控制器又称工作负载是用于实现管理pod的中间层，确保pod资源符合预期的状态，pod的资源出现故障时，会尝试 进行重启，当根据重启策略无效，则会重新新建pod的资源。 
 
-![image](80E79315088A480C92EBB650D19D6B7E)
+![image](./img/day02-4.png)
 
 - ReplicaSet: 代用户创建指定数量的pod副本数量，确保pod副本数量符合预期状态，并且支持滚动式自动扩容和缩容功能
 - Deployment：工作在ReplicaSet之上，用于管理无状态应用，目前来说最好的控制器。支持滚动更新和回滚功能，提供声明式配置
