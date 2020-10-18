@@ -36,6 +36,12 @@
   * [4.2 Service与Pod如何关联](#42-Service与Pod如何关联)
   * [4.3 为MySQL创建svc](#43--为MySQL创建svc)
   * [4.4 服务发现](#44-服务发现)
+  * [4.5 Service负载均衡之NodePort](#45-Service负载均衡之NodePort)
+  * [4.6 Kube-proxy原理](#46-kube-proxy原理)
+- [5.  Kubernetes服务访问之Ingress](#5--Kubernetes服务访问之Ingress)
+  * [5.1 实现逻辑](#51-实现逻辑)
+  * [5.2 安装](#52-安装)
+  * [5.3 Rewrite_Url](#53-Rewrite_Url)
 #   1. Kubernetes概念
 ##  1.1 纯容器模式的问题
 
@@ -1241,4 +1247,116 @@ kube-dns   ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   3d20h
 NAME     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
 myblog   ClusterIP   10.106.250.146   <none>        80/TCP     13m
 mysql    ClusterIP   10.98.4.243      <none>        3306/TCP   7m49s
+```
+##  4.5 Service负载均衡之NodePort
+cluster-ip为虚拟地址，只能在k8s集群内部进行访问，集群外部如果访问内部服务，实现方式之一为使用NodePort方式。NodePort会默认在 30000-32767 ，不指定的会随机使用其中一个。
+
+`myblog/deployment/svc-myblog-nodeport.yaml`
+
+```powershell
+apiVersion: v1
+kind: Service
+metadata:
+  name: myblog-np
+  namespace: luffy
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8002
+  selector:
+    app: myblog
+  type: NodePort
+```
+
+##  4.6 Kube-proxy原理
+
+ 运行在每个节点上，监听 API Server 中服务对象的变化，再通过创建流量路由规则来实现网络的转发。[参照]( https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
+有三种模式：
+
+- User space, 让 Kube-Proxy 在用户空间监听一个端口，所有的 Service 都转发到这个端口，然后 Kube-Proxy 在内部应用层对其进行转发 ， 所有报文都走一遍用户态，性能不高，k8s v1.2版本后废弃。
+- Iptables， 当前默认模式，完全由 IPtables 来实现， 通过各个node节点上的iptables规则来实现service的负载均衡，但是随着service数量的增大，iptables模式由于线性查找匹配、全量更新等特点，其性能会显著下降。 
+- IPVS， 与iptables同样基于Netfilter，但是采用的hash表，因此当service数量达到一定规模时，hash查表的速度优势就会显现出来，从而提高service的服务性能。 k8s 1.8版本开始引入，1.11版本开始稳定，需要开启宿主机的ipvs模块。
+
+
+#   5.  Kubernetes服务访问之Ingress
+对于Kubernetes的Service，无论是Cluster-Ip和NodePort均是四层的负载，集群内的服务如何实现七层的负载均衡，这就需要借助于Ingress，Ingress控制器的实现方式有很多，比如nginx, Contour, Haproxy, trafik, Istio。几种常用的ingress功能对比和选型可以参考[这里](https://www.kubernetes.org.cn/5948.html)
+
+Ingress-nginx是7层的负载均衡器 ，负责统一管理外部对k8s cluster中Service的请求。主要包含：
+
+- ingress-nginx-controller：根据用户编写的ingress规则（创建的ingress的yaml文件），动态的去更改nginx服务的配置文件，并且reload重载使其生效（是自动化的，通过lua脚本来实现）；
+
+- Ingress资源对象：将Nginx的配置抽象成一个Ingress对象
+
+##  5.1 实现逻辑
+-   1）ingress controller通过和kubernetes api交互，动态的去感知集群中ingress规则变化
+-   2）然后读取ingress规则(规则就是写明了哪个域名对应哪个service)，按照自定义的规则，生成一段nginx配置
+-   3）再写到nginx-ingress-controller的pod里，这个Ingress controller的pod里运行着一个Nginx服务，控制器把生成的nginx配置写入/etc/nginx/nginx.conf文件中
+-   4）然后reload一下使配置生效。以此达到域名分别配置和动态更新的问题。
+
+
+##  5.2 安装
+  [官方文档](https://github.com/kubernetes/ingress-nginx/blob/master/docs/deploy/index.md)
+
+```
+$ wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml
+## 或者使用myblog/deployment/ingress/mandatory.yaml
+## 修改部署节点
+$ grep -n5 nodeSelector mandatory.yaml
+212-    spec:
+213-      hostNetwork: true #添加为host模式
+214-      # wait up to five minutes for the drain of connections
+215-      terminationGracePeriodSeconds: 300
+216-      serviceAccountName: nginx-ingress-serviceaccount
+217:      nodeSelector:
+218-        ingress: "true"		#替换此处，来决定将ingress部署在哪些机器
+219-      containers:
+220-        - name: nginx-ingress-controller
+221-          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.30.0
+222-          args:
+
+```
+-   创建Ingress
+```
+# 为k8s-master节点添加label
+$ kubectl label node k8s-master ingress=true
+$ kubectl create -f mandatory.yaml
+```
+-   示例
+```
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: myblog
+  namespace: luffy
+spec:
+  rules:
+  - host: myblog.luffy.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: myblog
+          servicePort: 80
+```
+
+##  5.3 Rewrite_Url
+```
+   apiVersion: networking.k8s.io/v1beta1
+   kind: Ingress
+   metadata:
+     name: rewrite-path
+     namespace: luffy
+     annotations:
+       nginx.ingress.kubernetes.io/rewrite-target: /admin/$1
+   spec:
+     rules:
+     - host: myblog.luffy.com
+       http:
+         paths:
+         - path: /foo/(.*)
+           backend:
+             serviceName: myblog
+             servicePort: 80
 ```
