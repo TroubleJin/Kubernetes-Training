@@ -1270,14 +1270,51 @@ spec:
 ```
 
 ##  4.6 Kube-proxy原理
+- kube-proxy其实就是管理service的访问入口，包括集群内Pod到Service的访问和集群外访问service。
+- kube-proxy管理sevice的Endpoints，该service对外暴露一个Virtual IP，也成为Cluster IP, 集群内通过访问这个Cluster IP:Port就能访问到集群内对应的serivce下的Pod。
+- service是通过Selector选择的一组Pods的服务抽象，其实就是一个微服务，提供了服务的LB和反向代理的能力，而kube-proxy的主要作用就是负责service的实现。
+- service另外一个重要作用是，一个服务后端的Pods可能会随着生存灭亡而发生IP的改变，service的出现，给服务提供了一个固定的IP，而无视后端Endpoint的变化。
 
- 运行在每个节点上，监听 API Server 中服务对象的变化，再通过创建流量路由规则来实现网络的转发。[参照]( https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+运行在每个节点上，监听 API Server 中服务对象的变化，再通过创建流量路由规则来实现网络的转发。[参照]( https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
 
 有三种模式：
 
 - User space, 让 Kube-Proxy 在用户空间监听一个端口，所有的 Service 都转发到这个端口，然后 Kube-Proxy 在内部应用层对其进行转发 ， 所有报文都走一遍用户态，性能不高，k8s v1.2版本后废弃。
 - Iptables， 当前默认模式，完全由 IPtables 来实现， 通过各个node节点上的iptables规则来实现service的负载均衡，但是随着service数量的增大，iptables模式由于线性查找匹配、全量更新等特点，其性能会显著下降。 
 - IPVS， 与iptables同样基于Netfilter，但是采用的hash表，因此当service数量达到一定规模时，hash查表的速度优势就会显现出来，从而提高service的服务性能。 k8s 1.8版本开始引入，1.11版本开始稳定，需要开启宿主机的ipvs模块。
+
+```
+[root@k8s-master ~]# kubectl -n luffy get pod  -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP            NODE          NOMINATED NODE   READINESS GATES
+myblog-84f966749f-5bxjs   1/1     Running   0          3m52s   10.244.2.9    k8s-slave-2   <none>           <none>
+myblog-84f966749f-hqb7r   1/1     Running   0          3m52s   10.244.0.8    k8s-master    <none>           <none>
+myblog-84f966749f-qfhg7   1/1     Running   0          20h     10.244.1.14   k8s-slave-1   <none>           <none>
+mysql-778f489b9-qhbqv     1/1     Running   0          6d20h   10.244.1.12   k8s-slave-1   <none>           <none>
+[root@k8s-master ~]# iptables-save |grep -v myblog-np|grep  "luffy/myblog"
+-A KUBE-SERVICES ! -s 10.244.0.0/16 -d 10.106.250.146/32 -p tcp -m comment --comment "luffy/myblog: cluster IP" -m tcp --dport 80 -j KUBE-MARK-MASQ
+-A KUBE-SERVICES -d 10.106.250.146/32 -p tcp -m comment --comment "luffy/myblog: cluster IP" -m tcp --dport 80 -j KUBE-SVC-4RG7IZRJD6M4QEGQ
+[root@k8s-master ~]# iptables-save |grep KUBE-SVC-4RG7IZRJD6M4QEGQ
+:KUBE-SVC-4RG7IZRJD6M4QEGQ - [0:0]
+-A KUBE-SERVICES -d 10.106.250.146/32 -p tcp -m comment --comment "luffy/myblog: cluster IP" -m tcp --dport 80 -j KUBE-SVC-4RG7IZRJD6M4QEGQ
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -m statistic --mode random --probability 0.33332999982 -j KUBE-SEP-6DDITGI7VACUUWMT
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-KUIGW437YNZZR7HB
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -j KUBE-SEP-5WA3OQK4OOT27DRK
+[root@k8s-master ~]# iptables-save |grep  KUBE-SEP-6DDITGI7VACUUWMT
+:KUBE-SEP-6DDITGI7VACUUWMT - [0:0]
+-A KUBE-SEP-6DDITGI7VACUUWMT -s 10.244.0.8/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-6DDITGI7VACUUWMT -p tcp -m tcp -j DNAT --to-destination 10.244.0.8:8002
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -m statistic --mode random --probability 0.33332999982 -j KUBE-SEP-6DDITGI7VACUUWMT
+[root@k8s-master ~]# iptables-save |grep  KUBE-SEP-KUIGW437YNZZR7HB
+:KUBE-SEP-KUIGW437YNZZR7HB - [0:0]
+-A KUBE-SEP-KUIGW437YNZZR7HB -s 10.244.1.14/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-KUIGW437YNZZR7HB -p tcp -m tcp -j DNAT --to-destination 10.244.1.14:8002
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-KUIGW437YNZZR7HB
+[root@k8s-master ~]# iptables-save |grep  KUBE-SEP-5WA3OQK4OOT27DRK
+:KUBE-SEP-5WA3OQK4OOT27DRK - [0:0]
+-A KUBE-SEP-5WA3OQK4OOT27DRK -s 10.244.2.9/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-5WA3OQK4OOT27DRK -p tcp -m tcp -j DNAT --to-destination 10.244.2.9:8002
+-A KUBE-SVC-4RG7IZRJD6M4QEGQ -j KUBE-SEP-5WA3OQK4OOT27DRK
+```
 
 
 #   5.  Kubernetes服务访问之Ingress
