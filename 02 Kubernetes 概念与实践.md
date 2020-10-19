@@ -1316,6 +1316,34 @@ mysql-778f489b9-qhbqv     1/1     Running   0          6d20h   10.244.1.12   k8s
 -A KUBE-SVC-4RG7IZRJD6M4QEGQ -j KUBE-SEP-5WA3OQK4OOT27DRK
 ```
 
+**查看当前Kube-proxy**
+````
+[root@k8s-master ~]# kubectl -n kube-system get cm kube-proxy -o yaml|grep -n5 -i mode
+30-      scheduler: ""
+31-      strictARP: false
+32-      syncPeriod: 30s
+33-    kind: KubeProxyConfiguration
+34-    metricsBindAddress: 127.0.0.1:10249
+35:    mode: ""
+36-    nodePortAddresses: null
+37-    oomScoreAdj: -999
+38-    portRange: ""
+39-    udpIdleTimeout: 250ms
+40-    winkernel:
+devops@hfq-staging-5:~$ kubectl -n kube-system get cm kube-proxy-worker  -o yaml
+apiVersion: v1
+data:
+  config.conf: |
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    kind: KubeProxyConfiguration
+
+    clusterCIDR: 172.20.0.0/16
+
+    clientConnection:
+      kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
+
+    mode: ipvs
+````
 
 #   5.  Kubernetes服务访问之Ingress
 对于Kubernetes的Service，无论是Cluster-Ip和NodePort均是四层的负载，集群内的服务如何实现七层的负载均衡，这就需要借助于Ingress，Ingress控制器的实现方式有很多，比如nginx, Contour, Haproxy, trafik, Istio。几种常用的ingress功能对比和选型可以参考[这里](https://www.kubernetes.org.cn/5948.html)
