@@ -437,7 +437,7 @@ PING 172.20.0.2 (172.20.0.2): 56 data bytes
 64 bytes from 172.20.0.2: seq=0 ttl=64 time=0.395 ms
 ```
 ##  3.5 Flannel的vxlan实现
-![image](774B472C61BD4239B9A7BAD813F7BCA0)
+![image](./img/day03-7.png)
 flannel如何为每个节点分配Pod地址段
 ```
 [root@k8s-master ~]# kubectl -n kube-system get pods|grep flannel
@@ -522,7 +522,7 @@ vxlan模式适用于三层可达的网络环境，对集群的网络要求很宽
 
 网络插件的目的其实就是将本机的cni0网桥的流量送到目的主机的cni0网桥。实际上有很多集群是部署在同一二层网络环境下的，可以直接利用二层的主机当作流量转发的网关。这样的话，可以不用进行封包解包，直接通过路由表去转发流量。
 
-![image](7AA907E75B0442989D7059381A1CA20C)
+![image](./img/day03-6.png)
 
 为什么三层可达的网络不直接利用网关转发流量？
 
