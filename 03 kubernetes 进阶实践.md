@@ -539,7 +539,7 @@ vxlan模式适用于三层可达的网络环境，对集群的网络要求很宽
 
 #   4. Kubernetes认证授权
 ##  4.1 APIServer安全控制
-![image](3A5EA80628D34605A75F1AB1D3C97814)
+![image](./img/day03-8.png)
 
 - Authentication：身份认证
 
@@ -674,7 +674,7 @@ Certificate:
 认证通过后，提取出签发证书时指定的CN(Common Name),`kubernetes-admin`，作为请求的用户名 (User Name), 从证书中提取O(Organization)字段作为请求用户所属的组 (Group)，`group = system:masters`，然后传递给后面的授权模块。
 
 kubeadm在init初始引导集群启动过程中，创建了许多默认的RBAC规则， 在k8s有关RBAC的官方文档中，我们看到下面一些`default clusterrole`列表: 
-![image](0ACEB91DC3C34BFE9F394CD0A1E70CE8)
+![image](./img/day03-9.png)
 其中第一个cluster-admin这个cluster role binding绑定了system:masters group，这和authentication环节传递过来的身份信息不谋而合。 沿着system:masters group对应的cluster-admin clusterrolebinding“追查”下去，真相就会浮出水面。
 
 查看一下这一binding：
@@ -705,7 +705,7 @@ PolicyRule:
   *.*        []                 []              [*]
              [*]                []              [*]
 ```
-![image](2DB9B574924F48F4B7E3AAD3906CC7E5)
+![image](./img/day03-10.png)
 
 ##  4.3 RBAC
 Role-Based Access Control，基于角色的访问控制， apiserver启动参数添加--authorization-mode=RBAC 来启用RBAC认证模式，kubeadm安装的集群默认已开启。[官方介绍](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
@@ -904,7 +904,7 @@ PolicyRule:
 
 
 **查看一下策略**
-![image](0BED16BE3DB04D448CFA02547D252D67)
+![image](./img/day03-11.png)
 
 
 ## 4.5 ServiceAccount及K8SApi调用
