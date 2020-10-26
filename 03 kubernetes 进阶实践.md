@@ -1101,7 +1101,7 @@ $ kubectl -n luffy scale deployment myblog --replicas=2
 ```
 但是这个过程是手动操作的。在实际项目中，我们需要做到是的是一个自动化感知并自动扩容的操作。Kubernetes 也为提供了这样的一个资源对象：Horizontal Pod Autoscaling（Pod 水平自动伸缩），简称[HPA](https://v1-14.docs.kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) 
 
-![image](97D93688963D4168912C1D11EB89FDE5)
+![image](./img/day03-12.png)
 
 基本原理：HPA 通过监控分析控制器控制的所有 Pod 的负载变化情况来确定是否需要调整 Pod 的副本数量
 
@@ -1132,7 +1132,7 @@ heapster时代，apiserver 会直接将metric请求通过apiserver proxy 的方�
 
  `Metrics Server` 可以通过标准的 Kubernetes API 把监控数据暴露出来，比如获取某一Pod的监控数据：
 
-![image](998CD19F957B408D82CF970857E23D8A)
+![image](./img/day03-13.png)
 
 ## 5.2 Metric-Server
 
@@ -1215,14 +1215,14 @@ cgroup文件中的值是监控数据的最终来源，如
 
 Metrics数据流：
 
-![image](9657C594452A4CA19A09A6D97D013E8D) 
+![image](./img/day03-14.png) 
 Metrics Server是独立的一个服务，只能服务内部实现自己的api，是如何做到通过标准的kubernetes 的API格式暴露出去的？
 
 [kube-aggregator](https://github.com/kubernetes/kube-aggregator)
 
 ## 5.5 kube-aggregator聚合器及Metric-Server的实现
 kube-aggregator是对 apiserver 的api的一种拓展机制，它允许开发人员编写一个自己的服务，并把这个服务注册到k8s的api里面，即扩展 API 。
-![image](613058F0A0EC4C369A497727B992BB88)
+![image](./img/day03-15.png) 
 定义一个APIService对象：
 
 ```yaml
@@ -1341,7 +1341,7 @@ mysql-778f489b9-qhbqv     1/1     Running   0          14d
 
  除了基于 CPU 和内存来进行自动扩缩容之外，我们还可以根据自定义的监控指标来进行。这个我们就需要使用 `Prometheus Adapter`，Prometheus 用于监控应用的负载和集群本身的各种指标，`Prometheus Adapter` 可以帮我们使用 Prometheus 收集的指标并使用它们来制定扩展策略，这些指标都是通过 APIServer 暴露的，而且 HPA 资源对象也可以很轻易的直接使用。 
 
-![image](705E80EE73EE4FAF8E6F290E9447C681)
+![image](./img/day03-16.png)
 
 
 #   6. kubernetes对接分部式存储
