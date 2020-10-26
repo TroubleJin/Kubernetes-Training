@@ -25,6 +25,32 @@
   * [4.3 RBAC](#43-rbac)
   * [4.4 kubelet的认证授权](#44-kubelet的认证授权)
   * [4.5 ServiceAccount及K8SApi调用](#45-ServiceAccount及K8SApi调用)
+  * [4.6 创建用户认证授权的kubeconfig文件](#46-创建用户认证授权的kubeconfig文件)
+- [5. 通过HPA实现业务应用的动态扩缩容](#5-通过HPA实现业务应用的动态扩缩容)
+  * [5.1 HPA控制器介绍](#51-HPA控制器介绍)
+  * [5.2 Metric-Server](#52-Metric-Server)
+  * [5.3 安装](#53-安装)
+  * [5.4 kubelet的指标采集](#54-kubelet的指标采集)
+  * [5.5 kube-aggregator聚合器及Metric-Server的实现](#55-kube-aggregator聚合器及Metric-Server的实现)
+  * [5.6 HPA实践](#56-HPA实践)
+  * [5.7 基于自定义指标的动态伸缩](#57-基于自定义指标的动态伸缩)
+- [6. kubernetes对接分部式存储](#6-kubernetes对接分部式存储)
+  * [6.1 emptydir](#61-emptydir)
+  * [6.2 hostPath](#62-hostpath)
+  * [6.3 PV与PVC管理NFS存储卷实践](#63-PV与PVC管理NFS存储卷实践)
+  * [6.4 storageClass实现动态挂载](#64-storageClass实现动态挂载)
+- [7.  使用Helm3的部署](#7-使用Helm3的部署)
+  * [7.1 认识Helm](#71-认识Helm)
+  * [7.2 安装与快速入门实践](#72-安装与快速入门实践)
+  * [7.3 Helm基本使用](#73-Helm基本使用)
+  * [7.4 Helm repo更改](#74-Helm repo更改)
+  * [7.5 Helm模板内置函数和Value](#75-Helm模板内置函数和Value)
+    + [7.5.1 Helm 创建模板](#751-Helm创建模板)
+    + [7.5.2 添加简单的模板](#752-添加简单的模板)
+    + [7.5.3 内置对象](#753-内置对象)
+    + [7.5.4 Helm 模板之模板函数与管道](#754-Helm模板之模板函数与管道)
+    + [7.5.5 Helm模板之控制流程](#755-Helm模板之控制流程)
+    + [7.5.6 使用方法](#756-使用方法)
 #   1.  Etcd常用操作
 ##  1.1 etcdctl拷贝
 ```
@@ -985,4 +1011,863 @@ secrets:
 **验证结果**
 ```
 [root@k8s-master ~]# curl -k  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Il9iSUNSbkthVmNfdWo4eEFpVDgteThwMmZyQjdIMGFWUUJJT3plMW1XU2MifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJ0ZXN0LXRva2VuLWZ0cm1yIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InRlc3QiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiIxZmFkYmUyMy1mYjkwLTQwZTQtYTAwMy1kODQ3OWE5MDJmNDUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6dGVzdCJ9.Rn9a_pJFCQaT9GWL0KWqgxjOKkW0MhJupBjke3SqD_pGtdV8dlabX3MbAtp3GvVW9K8CgeHrX77XyD3-ANOORsE_9Ry5xaCdCQHJFpbw86XeSK8jJ_nW2gx710kxj3ocrh1IJwZwOtua35VaniHzHGVsMauWoFsrTM5d_LCUBYNkkLDdG5ZSfCTR-wmco4AgMqAZAY5p3EHjgfiEttXiDEjHD7n30YESd0qrjWiM3ySKJopWy5oNTQVICJ2x0q5svCJ6Izhj-YCs_j5ap4QTvMkORRKQhofc_zeZmD2bZUXaBRhRKxuNtHa9jNTV93p2CEmjhZmP-OaWyB_gU7rvLA" https://172.17.176.31:6443/api/v1/namespaces/luffy/pods?limit=500
+```
+
+##  4.6 创建用户认证授权的kubeconfig文件
+```
+#   生成私钥
+[root@k8s-master auth]# openssl genrsa -out luffy.key 2048
+Generating RSA private key, 2048 bit long modulus
+.....................+++
+.....................................................................+++
+e is 65537 (0x10001)
+#   生成证书请求文件
+[root@k8s-master auth]# openssl req -new -key luffy.key -out luffy.csr -subj "/O=demo:luffy/CN=luffy"
+# 证书拓展属性
+[root@k8s-master auth]# cat extfile.conf
+[ v3_ca ]
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+# 生成luffy.crt证书
+[root@k8s-master auth]# openssl x509 -req -in luffy.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -sha256 -out luffy.crt -extensions v3_ca -extfile extfile.conf -days 3650
+Signature ok
+subject=/O=demo:luffy/CN=luffy
+Getting CA Private Key
+```
+**配置kuberconfig文件**
+```
+# 创建kubeconfig文件，指定集群名称和地址
+[root@k8s-master auth]# kubectl config set-cluster luffy-cluster --certificate-authority=/etc/kubernetes/pki/ca.crt --embed-certs=true --server=https://172.17.176.31:6443 --kubeconfig=luffy.kubeconfig
+Cluster "luffy-cluster" set.
+# 为kubeconfig文件添加认证信息
+[root@k8s-master auth]# kubectl config set-credentials luffy --client-certificate=luffy.crt --client-key=luffy.key --embed-certs=true --kubeconfig=luffy.kubeconfig
+User "luffy" set.
+# 为kubeconfig添加上下文配置
+[root@k8s-master auth]# kubectl config set-context luffy-context --cluster=luffy-cluster --user=luffy --kubeconfig=luffy.kubeconfig
+Context "luffy-context" created.
+# 设置默认的上下文
+[root@k8s-master auth]# kubectl config use-context luffy-context --kubeconfig=luffy.kubeconfig
+Switched to context "luffy-context".
+```
+**验证权限**
+```
+[root@k8s-master auth]# kubectl get po --kubeconfig=luffy.kubeconfig 
+Error from server (Forbidden): pods is forbidden: User "luffy" cannot list resource "pods" in API group "" in the namespace "default"
+```
+**为luffy用户添加luffy命名空间访问权限**
+```
+[root@k8s-master auth]# cat luffy-role.yaml 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: luffy
+  name: luffy-admin
+rules:
+- apiGroups: [""] # "" 指定核心 API 组
+  resources: ["*"]
+  verbs: ["*"]
+[root@k8s-master auth]# cat luffy-rolebinding.yaml 
+apiVersion: rbac.authorization.k8s.io/v1
+# 此角色绑定使得用户 "jane" 能够读取 "default" 命名空间中的 Pods
+kind: RoleBinding
+metadata:
+  name: luffy-admin
+  namespace: luffy
+subjects:
+- kind: User
+  name: luffy # Name is case sensitive
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role #this must be Role or ClusterRole
+  name: luffy-admin # 这里的名称必须与你想要绑定的 Role 或 ClusterRole 名称一致
+  apiGroup: rbac.authorization.k8s.io
+```
+**重新校验权限**
+```
+[root@k8s-master auth]# kubectl get po --kubeconfig=luffy.kubeconfig 
+Error from server (Forbidden): pods is forbidden: User "luffy" cannot list resource "pods" in API group "" in the namespace "default"
+[root@k8s-master auth]# kubectl -n luffy get po --kubeconfig=luffy.kubeconfig 
+NAME                      READY   STATUS    RESTARTS   AGE
+myblog-7fb9874dd9-2xsmd   1/1     Running   0          6d23h
+myblog-7fb9874dd9-knk7w   1/1     Running   0          6d15h
+mysql-778f489b9-qhbqv     1/1     Running   0          13d
+```
+
+#   5. 通过HPA实现业务应用的动态扩缩容
+##  5.1 HPA控制器介绍
+当系统资源过高的时候，我们可以使用如下命令来实现 Pod 的扩缩容功能
+```
+$ kubectl -n luffy scale deployment myblog --replicas=2
+```
+但是这个过程是手动操作的。在实际项目中，我们需要做到是的是一个自动化感知并自动扩容的操作。Kubernetes 也为提供了这样的一个资源对象：Horizontal Pod Autoscaling（Pod 水平自动伸缩），简称[HPA](https://v1-14.docs.kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) 
+
+![image](97D93688963D4168912C1D11EB89FDE5)
+
+基本原理：HPA 通过监控分析控制器控制的所有 Pod 的负载变化情况来确定是否需要调整 Pod 的副本数量
+
+HPA的实现有两个版本：
+
+- autoscaling/v1，只包含了根据CPU指标的检测，稳定版本
+- autoscaling/v2beta1，支持根据memory或者用户自定义指标进行伸缩
+
+如何获取Pod的监控数据？
+
+- k8s 1.8以下：使用heapster，1.11版本完全废弃
+- k8s 1.8以上：使用metric-server
+
+思考：为什么之前用 heapster ，现在废弃了项目，改用 metric-server ？
+
+heapster时代，apiserver 会直接将metric请求通过apiserver proxy 的方式转发给集群内的 hepaster 服务，采用这种 proxy 方式是有问题的：
+```html
+  http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/service_name[:port_name]/proxy
+```
+
+- proxy只是代理请求，一般用于问题排查，不够稳定，且版本不可控
+
+- heapster的接口不能像apiserver一样有完整的鉴权以及client集成
+
+- pod 的监控数据是核心指标（HPA调度），应该和 pod 本身拥有同等地位，即 metric应该作为一种资源存在，如metrics.k8s.io 的形式，称之为 Metric Api
+
+于是官方从 1.8 版本开始逐步废弃 heapster，并提出了上边 Metric api 的概念，而 metrics-server 就是这种概念下官方的一种实现，用于从 kubelet获取指标，替换掉之前的 heapster。
+
+ `Metrics Server` 可以通过标准的 Kubernetes API 把监控数据暴露出来，比如获取某一Pod的监控数据：
+
+![image](998CD19F957B408D82CF970857E23D8A)
+
+## 5.2 Metric-Server
+
+[官方介绍](https://v1-14.docs.kubernetes.io/docs/tasks/debug-application-cluster/resource-metrics-pipeline/#metrics-server)
+
+```
+...
+Metric server collects metrics from the Summary API, exposed by Kubelet on each node.
+
+Metrics Server registered in the main API server through Kubernetes aggregator, which was introduced in Kubernetes 1.7
+...
+```
+## 5.3 安装
+官方代码仓库地址：https://github.com/kubernetes-sigs/metrics-server
+
+Depending on your cluster setup, you may also need to change flags passed to the Metrics Server container. Most useful flags:
+
+- `--kubelet-preferred-address-types` - The priority of node address types used when determining an address for connecting to a particular node (default [Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP])
+- `--kubelet-insecure-tls` - Do not verify the CA of serving certificates presented by Kubelets. For testing purposes only.
+- `--requestheader-client-ca-file` - Specify a root certificate bundle for verifying client certificates on incoming requests.
+
+```powershell
+$ wget https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+```
+
+修改args参数：
+
+```powershell
+...
+ 84       containers:
+ 85       - name: metrics-server
+ 86         image: registry.aliyuncs.com/google_containers/metrics-server-amd64:v0.3.6
+ 87         imagePullPolicy: IfNotPresent
+ 88         args:
+ 89           - --cert-dir=/tmp
+ 90           - --secure-port=4443
+ 91           - --kubelet-insecure-tls
+ 92           - --kubelet-preferred-address-types=InternalIP
+...
+```
+
+执行安装：
+
+```powershell
+$ kubectl create -f components.yaml
+
+$ kubectl -n kube-system get pods
+
+$ kubectl top nodes
+```
+## 5.4 kubelet的指标采集
+无论是 heapster还是 metric-server，都只是数据的中转和聚合，两者都是调用的 kubelet 的 api 接口获取的数据，而 kubelet 代码中实际采集指标的是 cadvisor 模块，你可以在 node 节点访问 10250 端口获取监控数据：
+
+- Kubelet Summary metrics:  https://127.0.0.1:10250/metrics，暴露 node、pod 汇总数据
+- Cadvisor metrics: https://127.0.0.1:10250/metrics/cadvisor，暴露 container 维度数据
+
+```
+[root@k8s-master auth]# kubectl describe secret admin-token-zljl7  -n kubernetes-dashboard
+[root@k8s-master auth]#  curl -k  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Il9iSUNSbkthVmNfdWo4eEFpVDgteThwMmZyQjdIMGFWUUJJT3plMW1XU2MifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi10b2tlbi16bGpsNyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJhZG1pbiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjU3OGY0MWM0LTNkYzctNDk1MS1iY2E1LWZkNjg4ZDIwMzgzOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWRhc2hib2FyZDphZG1pbiJ9.GedwSDre6sKpi0JfrY4NCEzwuqY-tqU4wONQd2Fi0C2aWvZIwll9xDDTHlPd2sXLbCzCwM9JOKyZDoaHDAhoHggIyyyyrmt2PwsQKwwUM-3zOWI-Bzy0imviQqhsVeoWtZqV89Scw8x6VLwsv3470hxgrAL0Gtbafvg8jJG90vrlxe_G12XfCN7lGb1BYI5fY4oqUgalw3P8lqqzohEs9qVX3B7IHV3F1zjW1irqAcocIpHDG9VXKkVkgrNw85eoj92UdQTKVQJpkSxfB-OEoy3rnDfMHbVUsgW2nYCz4NZeJJI6OfgmseZSpgK9buD45B4FxkkjHfWJ93TZTT2Oag" https://localhost:10250/metrics
+```
+
+kubelet虽然提供了 metric 接口，但实际监控逻辑由内置的cAdvisor模块负责，早期的时候，cadvisor是单独的组件，从k8s 1.12开始，cadvisor 监听的端口在k8s中被删除，所有监控数据统一由Kubelet的API提供。
+
+cadvisor获取指标时实际调用的是 runc/libcontainer库，而libcontainer是对 cgroup文件 的封装，即 cadvsior也只是个转发者，它的数据来自于cgroup文件。
+
+cgroup文件中的值是监控数据的最终来源，如
+
+- mem usage的值，
+
+  -  对于docker容器来讲，来源于`/sys/fs/cgroup/memory/docker/[containerId]/memory.usage_in_bytes`
+
+  - 对于pod来讲，`/sys/fs/cgroup/memory/kubepods/besteffort/pod[podId]/memory.usage_in_bytes`或者
+
+    `/sys/fs/cgroup/memory/kubepods/burstable/pod[podId]/memory.usage_in_bytes`
+
+- 如果没限制内存，Limit = machine_mem，否则来自于
+   `/sys/fs/cgroup/memory/docker/[id]/memory.limit_in_bytes`
+
+- 内存使用率 = memory.usage_in_bytes/memory.limit_in_bytes
+
+Metrics数据流：
+
+![image](9657C594452A4CA19A09A6D97D013E8D) 
+Metrics Server是独立的一个服务，只能服务内部实现自己的api，是如何做到通过标准的kubernetes 的API格式暴露出去的？
+
+[kube-aggregator](https://github.com/kubernetes/kube-aggregator)
+
+## 5.5 kube-aggregator聚合器及Metric-Server的实现
+kube-aggregator是对 apiserver 的api的一种拓展机制，它允许开发人员编写一个自己的服务，并把这个服务注册到k8s的api里面，即扩展 API 。
+![image](613058F0A0EC4C369A497727B992BB88)
+定义一个APIService对象：
+
+```yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.luffy.k8s.io
+spec:
+  group: luffy.k8s.io
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: true
+  service:
+    name: service-A       # 必须https访问
+    namespace: luffy
+    port: 443   
+  version: v1beta1
+  versionPriority: 100
+```
+
+k8s会自动帮我们代理如下url的请求：
+
+```powershell
+proxyPath := "/apis/" + apiService.Spec.Group + "/" + apiService.Spec.Version
+```
+
+即：https://192.168.136.10:6443/apis/luffy.k8s.io/v1beta1/xxxx转到我们的service-A服务中，service-A中只需要实现 `https://service-A/luffy.k8s.io/v1beta1/xxxx` 即可。
+
+
+
+看下metric-server的实现：
+
+```powershell
+$ kubectl get apiservice 
+NAME                       SERVICE                      AVAILABLE                      
+v1beta1.metrics.k8s.io   kube-system/metrics-server		True
+
+$ kubectl get apiservice v1beta1.metrics.k8s.io -oyaml
+...
+spec:
+  group: metrics.k8s.io
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: true
+  service:
+    name: metrics-server
+    namespace: kube-system
+    port: 443
+  version: v1beta1
+  versionPriority: 100
+...
+
+$ kubectl -n kube-system get svc metrics-server
+NAME             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+metrics-server   ClusterIP   10.110.111.146   <none>        443/TCP   11h
+
+$ curl -k  -H "Authorization: Bearer xxxx" https://10.110.111.146
+{
+  "paths": [
+    "/apis",
+    "/apis/metrics.k8s.io",
+    "/apis/metrics.k8s.io/v1beta1",
+    "/healthz",
+    "/healthz/healthz",
+    "/healthz/log",
+    "/healthz/ping",
+    "/healthz/poststarthook/generic-apiserver-start-informers",
+    "/metrics",
+    "/openapi/v2",
+    "/version"
+  ]
+```
+
+##  5.6 HPA实践
+-   基于cpu的动态伸缩
+```
+[root@k8s-master hpa]# cat hpa-myblog.yaml 
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-myblog-cpu
+  namespace: luffy
+spec:
+  maxReplicas: 3
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myblog
+  targetCPUUtilizationPercentage: 10
+```
+> Deployment对象必须配置requests的参数，不然无法获取监控数据，也无法通过HPA进行动态伸缩
+
+**验证**
+```
+[root@k8s-master hpa]# kubectl -n luffy get svc myblog
+NAME     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+myblog   ClusterIP   10.106.250.146   <none>        80/TCP    14d
+[root@k8s-master hpa]# kubectl -n luffy scale deploy myblog --replicas=1
+deployment.apps/myblog scaled
+[root@k8s-master hpa]# ab -n 100000 -c 1000 http://10.106.250.146/blog/index/
+This is ApacheBench, Version 2.3 <$Revision: 1430300 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 10.106.250.146 (be patient)
+apr_socket_recv: Connection refused (111)
+Total of 1305 requests completed
+[root@k8s-master ~]# kubectl -n luffy get pods 
+NAME                      READY   STATUS    RESTARTS   AGE
+myblog-7fb9874dd9-2xsmd   0/1     Running   1          7d
+myblog-7fb9874dd9-qzvv9   1/1     Running   0          26s
+myblog-7fb9874dd9-t2bh6   1/1     Running   0          26s
+mysql-778f489b9-qhbqv     1/1     Running   0          14d
+```
+
+##  5.7 基于自定义指标的动态伸缩
+
+ 除了基于 CPU 和内存来进行自动扩缩容之外，我们还可以根据自定义的监控指标来进行。这个我们就需要使用 `Prometheus Adapter`，Prometheus 用于监控应用的负载和集群本身的各种指标，`Prometheus Adapter` 可以帮我们使用 Prometheus 收集的指标并使用它们来制定扩展策略，这些指标都是通过 APIServer 暴露的，而且 HPA 资源对象也可以很轻易的直接使用。 
+
+![image](705E80EE73EE4FAF8E6F290E9447C681)
+
+
+#   6. kubernetes对接分部式存储
+##  6.1 emptydir
+k8s存储的目的就是保证Pod重建后，数据不丢失。简单的数据持久化的下述方式：
+
+- emptyDir 
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: test-pd
+  spec:
+    containers:
+    - image: k8s.gcr.io/test-webserver
+      name: webserver
+      volumeMounts:
+      - mountPath: /cache
+        name: cache-volume
+    - image: k8s.gcr.io/test-redis
+      name: redis
+      volumeMounts:
+      - mountPath: /data
+        name: cache-volume
+  volumes:
+    - name: cache-volume
+      emptyDir: {}
+  ```
+- Pod内的容器共享卷的数据
+- 存在于Pod的生命周期，Pod销毁，数据丢失
+- Pod内的容器自动重建后，数据不会丢失
+
+##  6.2 hostPath
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: test-pd
+  spec:
+    containers:
+    - image: k8s.gcr.io/test-webserver
+      name: test-container
+      volumeMounts:
+      - mountPath: /test-pd
+        name: test-volume
+    volumes:
+    - name: test-volume
+      hostPath:
+        # directory location on host
+        path: /data
+        # this field is optional
+        type: Directory
+  ```
+
+##  6.3 PV与PVC管理NFS存储卷实践
+volume支持的种类众多（参考 https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes ），每种对应不同的存储后端实现，因此为了屏蔽后端存储的细节，同时使得Pod在使用存储的时候更加简洁和规范，k8s引入了两个新的资源类型，PV和PVC。
+
+PersistentVolume（持久化卷），是对底层的存储的一种抽象，它和具体的底层的共享存储技术的实现方式有关，比如 Ceph、GlusterFS、NFS 等，都是通过插件机制完成与共享存储的对接。如使用PV对接NFS存储：
+- capacity，存储能力， 目前只支持存储空间的设置， 就是我们这里的 storage=1Gi，不过未来可能会加入 IOPS、吞吐量等指标的配置。 
+- accessModes，访问模式， 是用来对 PV 进行访问模式的设置，用于描述用户应用对存储资源的访问权限，访问权限包括下面几种方式： 
+  - ReadWriteOnce（RWO）：读写权限，但是只能被单个节点挂载
+  - ReadOnlyMany（ROX）：只读权限，可以被多个节点挂载
+  - ReadWriteMany（RWX）：读写权限，可以被多个节点挂载
+- persistentVolumeReclaimPolicy，pv的回收策略, 目前只有 NFS 和 HostPath 两种类型支持回收策略 
+  - Retain（保留）- 保留数据，需要管理员手工清理数据
+  - Recycle（回收）- 清除 PV 中的数据，效果相当于执行 rm -rf /thevolume/*
+  - Delete（删除）- 与 PV 相连的后端存储完成 volume 的删除操作，当然这常见于云服务商的存储服务，比如 ASW EBS。
+
+因为PV是直接对接底层存储的，就像集群中的Node可以为Pod提供计算资源（CPU和内存）一样，PV可以为Pod提供存储资源。因此PV不是namespaced的资源，属于集群层面可用的资源。Pod如果想使用该PV，需要通过创建PVC挂载到Pod中。
+
+```
+[root@k8s-master ~]# cat pv-nfs.yaml 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+spec:
+  capacity: 
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /data/k8s
+    server: 158494a809-qpo3.cn-beijing.nas.aliyuncs.com
+[root@k8s-master ~]# kubectl get pv
+NAME     CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+nfs-pv   1Gi        RWO            Retain           Available                                   59s
+```
+一个 PV 的生命周期中，可能会处于4中不同的阶段：
+
+- Available（可用）：表示可用状态，还未被任何 PVC 绑定
+- Bound（已绑定）：表示 PV 已经被 PVC 绑定
+- Released（已释放）：PVC 被删除，但是资源还未被集群重新声明
+- Failed（失败）： 表示该 PV 的自动回收失败
+
+```
+[root@k8s-master ~]# cat pvc.yaml 
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-nfs
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+[root@k8s-master ~]# kubectl get pvc
+NAME      STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+pvc-nfs   Bound    nfs-pv   1Gi        RWO                           16s
+```
+**访问模式，storage大小（pvc大小需要小于pv大小），以及 PV 和 PVC 的 storageClassName 字段必须一样，这样才能够进行绑定。**
+-   PersistentVolumeController会不断地循环去查看每一个 PVC，是不是已经处于 Bound（已绑定）状态。如果不是，那它就会遍历所有的、可用的 PV，并尝试将其与未绑定的 PVC 进行绑定，这样，Kubernetes 就可以保证用户提交的每一个 PVC，只要有合适的 PV 出现，它就能够很快进入绑定状态。而所谓将一个 PV 与 PVC 进行“绑定”，其实就是将这个 PV 对象的名字，填在了 PVC 对象的 spec.volumeName 字段上。
+**与pod进行绑定**
+```
+[root@k8s-master ~]# cat deployment.yaml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-pvc
+spec:
+  replicas: 1
+  selector:             #指定Pod的选择器
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:                        #挂载容器中的目录到pvc nfs中的目录
+        - name: www
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: www
+        persistentVolumeClaim:              #指定pvc
+          claimName: pvc-nfs
+```
+
+## 6.4 storageClass实现动态挂载
+创建pv及pvc过程是手动，且pv与pvc一一对应，手动创建很繁琐。因此，通过storageClass  +  provisioner的方式来实现通过PVC自动创建并绑定PV。
+
+部署： https://github.com/kubernetes-retired/external-storage 
+
+```
+[root@k8s-master storageclass]# cat provisioner.yaml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  labels:
+    app: nfs-client-provisioner
+  # replace with namespace where provisioner is deployed
+  namespace: nfs-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: quay.io/external_storage/nfs-client-provisioner:latest
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: luffy.com/nfs
+            - name: NFS_SERVER
+              value: 158494a809-qpo3.cn-beijing.nas.aliyuncs.com
+            - name: NFS_PATH  
+              value: /data/k8s
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: 158494a809-qpo3.cn-beijing.nas.aliyuncs.com
+            path: /data/k8s
+[root@k8s-master storageclass]# cat rbac.yaml 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: nfs-client-provisioner
+  namespace: nfs-provisioner
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-client-provisioner-runner
+  namespace: nfs-provisioner
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-nfs-client-provisioner
+  namespace: nfs-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    namespace: nfs-provisioner
+roleRef:
+  kind: ClusterRole
+  name: nfs-client-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  namespace: nfs-provisioner
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  namespace: nfs-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    # replace with namespace where provisioner is deployed
+    namespace: nfs-provisioner
+roleRef:
+  kind: Role
+  name: leader-locking-nfs-client-provisioner
+  apiGroup: rbac.authorization.k8s.io
+[root@k8s-master storageclass]# cat storage-class.yaml 
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs
+provisioner: luffy.com/nfs
+[root@k8s-master storageclass]# cat pvc.yaml 
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: test-claim2
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: nfs
+```
+**查看验证**
+```
+[root@k8s-master storageclass]# kubectl get pvc
+NAME          STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+pvc-nfs       Bound    nfs-pv                                     1Gi        RWO                           27h
+test-claim2   Bound    pvc-d2cec10a-8d07-45fd-92a2-e6fb6e6f0c8b   1Mi        RWX            nfs            112s
+```
+
+
+
+#   7.  使用Helm3的部署
+##  7.1 认识Helm
+1. 为什么有helm？
+
+2. Helm是什么？
+
+   kubernetes的包管理器，“可以将Helm看作Linux系统下的apt-get/yum”。  
+
+   - 对于应用发布者而言，可以通过Helm打包应用，管理应用依赖关系，管理应用版本并发布应用到软件仓库。
+
+   - 对于使用者而言，使用Helm后不用需要了解Kubernetes的Yaml语法并编写应用部署文件，可以通过Helm下载并在kubernetes上安装需要的应用。
+
+   除此以外，Helm还提供了kubernetes上的软件部署，删除，升级，回滚应用的强大功能。
+3. Helm的重要概念
+
+   - chart，应用的信息集合，包括各种对象的配置模板、参数定义、依赖关系、文档说明等
+   - Repoistory，chart仓库，存储chart的地方，并且提供了一个该 Repository 的 Chart 包的清单文件以供查询。Helm 可以同时管理多个不同的 Repository。
+   - release， 当 chart 被安装到 kubernetes 集群，就生成了一个 release ， 是 chart 的运行实例，代表了一个正在运行的应用 
+
+helm 是包管理工具，包就是指 chart，helm 能够：
+
+- 从零创建chart
+- 与仓库交互，拉取、保存、更新 chart
+- 在kubernetes集群中安装、卸载 release
+- 更新、回滚、测试 release
+
+##  7.2 安装与快速入门实践
+下载最新的稳定版本：https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
+
+更多版本可以参考： https://github.com/helm/helm/releases 
+
+```powershell
+# k8s-master节点
+$ wget https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
+$ tar -zxf helm-v3.2.4-linux-amd64.tar.gz
+
+$ cp linux-amd64/helm /usr/local/bin/
+
+# 验证安装
+$ helm version
+version.BuildInfo{Version:"v3.2.4", GitCommit:"0ad800ef43d3b826f31a5ad8dfbb4fe05d143688", GitTreeState:"clean", GoVersion:"go1.13.12"}
+$ helm env
+
+# 添加仓库
+$ helm repo add stable http://mirror.azure.cn/kubernetes/charts/
+# 同步最新charts信息到本地
+$ helm repo update
+```
+##  7.3 Helm基本使用
+-   创建一个chart
+```
+[root@k8s-master helm]# helm create hello-helm
+[root@k8s-master helm]# ls -l
+total 0
+drwxr-xr-x 4 root root 93 Oct 25 10:53 hello-helm
+#
+```
+-   编辑里面的hello-helm/values.yaml
+```
+[root@k8s-master helm]# helm install ./hello-helm
+[root@k8s-master ~]# kubectl get pod,svc -o wide
+NAME                                                 READY   STATUS    RESTARTS   AGE   IP            NODE        NOMINATED NODE   READINESS GATES
+pod/interesting-rabbit-hello-helm-5d9d68fd99-qj888   1/1     Running   0          42m   10.244.1.54   k8s-node1   <none>           <none>
+
+NAME                                    TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+service/interesting-rabbit-hello-helm   NodePort    10.1.28.222   <none>        80:32584/TCP   42m   app.kubernetes.io/instance=interesting-rabbit,app.kubernetes.io/name=hello-helm
+service/kubernetes                      ClusterIP   10.1.0.1      <none>        443/TCP        10d   <none>
+
+#   查看版本
+[root@k8s-master ~]# helm list
+NAME              	REVISION	UPDATED                 	STATUS  	CHART           	APP VERSION	NAMESPACE
+interesting-rabbit	1       	Fri Oct 25 10:54:01 2019	DEPLOYED	hello-helm-0.1.0	1.0        	defaul
+```
+
+##  7.4 Helmrepo更改
+```
+[root@k8s-master ~]# helm repo remove stable
+[root@k8s-master ~]# helm repo add stable https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
+[root@k8s-master ~]# helm repo update
+[root@k8s-master ~]# helm repo list
+NAME  	URL                                                   
+stable	https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
+local 	http://127.0.0.1:8879/charts 
+```
+
+##  7.5 Helm模板内置函数和Value
+### 7.5.1 Helm 创建模板
+```
+[root@k8s-master helm]# helm  create mychart
+Creating mychart
+[root@k8s-master helm]# cat mychart/templates/configmap.yaml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mychart-configmap
+data:
+  myvalue: "Hello World"
+[root@k8s-master helm]# helm install ./mychart/
+NAME:   ungaged-lizard
+LAST DEPLOYED: Fri Oct 25 14:50:39 2019
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==> v1/ConfigMap
+NAME               DATA  AGE
+mychart-configmap  1     0s
+
+#   查看
+[root@k8s-master helm]# helm  list
+NAME              	REVISION	UPDATED                 	STATUS  	CHART           	APP VERSION	NAMESPACE
+interesting-rabbit	1       	Fri Oct 25 10:54:01 2019	DEPLOYED	hello-helm-0.1.0	1.0        	default  
+ungaged-lizard    	1       	Fri Oct 25 14:50:39 2019	DEPLOYED	mychart-0.1.0   	1.0        	default  
+[root@k8s-master helm]# helm get manifest ungaged-lizard
+
+---
+# Source: mychart/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mychart-configmap
+data:
+  myvalue: "Hello World"
+```
+
+###  7.5.2 添加简单的模板
+我们可以看到上⾯我们定义的 ConfigMap 的名字是固定的，但往往这并不是⼀种很好的做法，我们可
+以通过插⼊ release 的名称来⽣成资源的名称，⽐如这⾥ ConfigMap 
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+data:
+  myvalue: "Hello World"
+```
+-   调试 
+```
+[root@k8s-master helm]# helm install --dry-run --debug ./mychart
+```
+
+###  7.5.3 内置对象
+-   Release：这个对象描述了 release 本身。它⾥⾯有⼏个对象
+```
+Release.Name：release 名称
+Release.Time：release 的时间
+Release.Namespace：release 的 namespace（如果清单未覆盖）
+Release.Service：release 服务的名称（始终是 Tiller）。
+Release.Revision：此 release 的修订版本号，从1开始累加。
+Release.IsUpgrade：如果当前操作是升级或回滚，则将其设置为 true。
+Release.IsInstall：如果当前操作是安装，则设置为 true。
+```
+-   Values：从 values.yaml ⽂件和⽤户提供的⽂件传⼊模板的值。默认情况下，Values 是空的.：
+-   Chart： Chart.yaml ⽂件的内容。所有的 Chart 对象都将从该⽂件中获取。chart 指南中Charts Guide列出了可⽤字段，可以前往查看。
+-   Files：这提供对chart中所有⾮特殊⽂件的访问。虽然⽆法使⽤它来访问模板，但可以使⽤它来访问 chart 中的其他⽂件。请参阅 "访问⽂件" 部分。
+```
+Files.Get 是⼀个按名称获取⽂件的函数（.Files.Get config.ini）
+Files.GetBytes 是将⽂件内容作为字节数组⽽不是字符串获取的函数。这对于像图⽚这样的东
+⻄很有⽤。
+```
+-   Capabilities：这提供了关于 Kubernetes 集群⽀持的功能的信息。
+```
+Capabilities.APIVersions 是⼀组版本信息。
+Helm 模板之内置函数和Values
+280
+Capabilities.APIVersions.Has $version 指示是否在群集上启⽤版本（batch/v1）。
+Capabilities.KubeVersion 提供了查找 Kubernetes 版本的⽅法。它具有以下值：Major，
+Minor，GitVersion，GitCommit，GitTreeState，BuildDate，GoVersion，Compiler，和
+Platform。
+Capabilities.TillerVersion 提供了查找 Tiller 版本的⽅法。它具有以下值：SemVer，
+GitCommit，和 GitTreeState。
+```
+-   Template：包含有关正在执⾏的当前模板的信息
+-   Name：到当前模板的⽂件路径（例如 mychart/templates/mytemplate.yaml）
+-   BasePath：当前 chart 模板⽬录的路径（例如 mychart/templates）.
+修改configmap.yaml
+```
+[root@k8s-master helm]# cat mychart/templates/configmap.yaml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+data:
+  myvalue: "Hello World"
+  course: {{ .Values.course }}
+[root@k8s-master helm]# helm install --dry-run --debug ./mychart
+```
+临时设置：
+```
+[root@k8s-master helm]# helm install --dry-run --debug --set course=python ./mychart
+```
+
+### 7.5.4 Helm模板之模板函数与管道
+-   quote函数：转换成字符串
+```
+course: {{ quote .Values.course }}
+```
+-   repeat函数：
+```
+k8s: {{ .Values.course | repeat 3 | quote }}
+```
+-   default函数：
+```
+myvalue: {{ .Values.hello | default "Hello World" | quote }}
+```
+-   管道：
+```
+course: {{ .Values.course|upper |quote }}
+```
+
+### 7.5.5 Helm模板之控制流程
+```
+[root@k8s-master mychart]# cat templates/configmap.yaml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+data:
+  myvalue: {{ .Values.hello | default "Hello World" | quote }}
+  course: {{ .Values.course|upper |quote }}
+  project: {{ .Values.python | repeat 3 | quote }}
+  {{- if eq .Values.python "django" }}
+  web: true
+  {{- end }}
+```
+
+### 7.5.6 使用方法
+```
+hfq-staging-5机器
+cd /data/helm/
+安装命令
+helm install --name app-market-dev ./mycharts --set "project=app-market,env=dev,port=12334,tag=39"
+更新命令
+devops@hfq-staging-5:/data/helm$ helm upgrade app-market-dev ./mycharts --set "project=app-market,env=dev,port=12334,tag=39"
+测试生成的yaml
+helm install --dry-run  --debug --name adsdv ./mycharts --set "project=app-market,env=dev,port=12334,tag=39"
 ```
