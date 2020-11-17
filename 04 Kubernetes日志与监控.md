@@ -1163,8 +1163,7 @@ clusterrolebinding.rbac.authorization.k8s.io/fluentd-es created
 daemonset.apps/fluentd-es created
 ```
 
-![image](EF0478E182524BBD9321FF8AD77ED26B)
-
+![image](./img/day04-12.png)
 
 #   5.  Prometheus实现k8s集群的服务监控
 Prometheus 是一个开源监控系统，它本身已经成为了云原生中指标监控的事实标准 。
@@ -1186,7 +1185,7 @@ k8s对监控接口进行了标准化，主要分了三类：
   对应的接口是 external.metrics.k8s.io。主要的实现厂商就是各个云厂商的 provider，通过这个 provider 可以通过云资源的监控指标
 
 
-![image](4AA998914BF64AE4A78531AB5977F047)
+![image](./img/day04-13.png)
 
 
 - Prometheus Server ，监控、告警平台核心，抓取目标端监控数据，生成聚合数据，存储时间序列数据
@@ -1426,7 +1425,7 @@ apiserver自身也提供了/metrics 的api来提供监控数据
 ```
 [root@k8s-master monitor]# curl -XPOST 10.111.216.43:9090/-/reload
 ```
-![image](37EC75E252204AC49BD286BE08B642D8)
+![image](./img/day04-14.png)
 
 ##  5.3 监控Node
 
@@ -1525,7 +1524,7 @@ spec:
 
 默认访问的地址是http://node-ip:10250/metrics，10250是kubelet API的服务端口，说明Prometheus的node类型的服务发现模式，默认是和kubelet的10250绑定的，而我们是期望使用node-exporter作为采集的指标来源，因此需要把访问的endpoint替换成http://node-ip:9100/metrics。
 
-![image](C213877D50264DAF8718638134A5FFAC)
+![image](./img/day04-15.png)
 
 在真正抓取数据前，Prometheus提供了relabeling的能力。
 
@@ -1539,7 +1538,7 @@ spec:
         action: replace
 ```
 
-![image](6E06AAC31CB04A2CB141D11B367A8282)
+![image](./img/day04-16.png)
 
 
 ##  5.5 使用cadvisor实现容器指标的采集
@@ -1574,7 +1573,7 @@ https://<node-ip>:10250/metrics             # node上的kubelet的指标数据
 
 综上，利用node类型，可以实现对daemonset类型服务的目标自动发现以及监控数据抓取。
 
-![image](A1D70AC58B304E4DB7101AC7D99696C1)
+![image](./img/day04-17.png)
 
 ##  5.6 集群Service服务的监控指标采集
 
@@ -1589,7 +1588,7 @@ https://<node-ip>:10250/metrics             # node上的kubelet的指标数据
 ```
 
 添加到Prometheus配置中进行测试：
-![image](43602052AC504DB8A37B79736BA040A1)
+![image](./img/day04-18.png)
 
 可以发现，实际上endpoint这个类型，目标是去抓取整个集群中所有的命名空间的Endpoint列表，然后使用默认的/metrics进行数据抓取，我们可以通过查看集群中的所有ep列表来做对比：
 
