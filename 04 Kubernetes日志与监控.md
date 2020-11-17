@@ -2186,7 +2186,7 @@ dashboard： https://grafana.com/grafana/dashboards
     -   https://grafana.com/grafana/dashboards/8588 
     -   https://grafana.com/grafana/dashboards/13105
 
-![image](4F2910E576564758ACBC15B03AEFBE5D)
+![image](./img/day04-19.png)
 
 
 
@@ -2198,7 +2198,7 @@ Alertmanager是一个独立的告警模块。
 - 通过分组、删除重复等处理，并将它们通过路由发送给正确的接收器；
 - 告警方式可以按照不同的规则发送给不同的模块负责人。Alertmanager支持Email, Slack，等告警方式, 也可以通过webhook接入钉钉等国内IM工具。
 
-![image](5BF892043BAF427EBFEEE96D97C92976)
+![image](./img/day04-20.png)
 
 如果集群主机的内存使用率超过80%，且该现象持续了2分钟？想实现这样的监控告警，如何做？
 
@@ -2998,7 +2998,7 @@ metadata:
 
 一条告警产生后，还要经过 Alertmanager 的分组、抑制处理、静默处理、去重处理和降噪处理最后再发送给接收者。这个过程中可能会因为各种原因会导致告警产生了却最终没有进行通知，可以通过下图了解整个告警的生命周期：
 
-![image](AFC1B53EEE2043A9AE797277DF29E550)
+![image](./img/day04-21.png)
 
  https://github.com/liyongxin/prometheus-webhook-wechat 
 
@@ -3121,7 +3121,7 @@ groups:
 
 前面章节，我们讲过基于CPU和内存的HPA，即利用metrics-server及HPA，可以实现业务服务可以根据pod的cpu和内存进行弹性伸缩。
 
-![image](D16D41B0C6264367A69711DC897FD2DE)
+![image](./img/day04-22.png)
 
 k8s对监控接口进行了标准化：
 
