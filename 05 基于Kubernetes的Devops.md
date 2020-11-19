@@ -1,4 +1,21 @@
-[toc]
+- [1.  基于Kubernetes的Devops](#1----kubernetes-devops)
+  * [1.1 DevOps、CI、CD介绍](#11-devops-ci-cd--)
+  * [1.2 Jenkins初体验](#12-jenkins---)
+  * [1.3 安装gitlab](#13---gitlab)
+  * [1.4 Master-Slaves模式](#14-master-slaves--)
+    + [1.4.1 添加slave节点](#141---slave--)
+    + [1.4.2 执行java命令启动agent服务](#142---java----agent--)
+    + [1.4.3 Jenkins定制化容器](#143-jenkins-----)
+  * [1.5 流水线](#15----)
+    + [1.5.1   优化流水线部署](#151----------)
+    + [1.5.2 使用k8s部署服务](#152---k8s----)
+    + [1.5.3 使用凭据管理敏感信息](#153-----------)
+  * [1.6 多分支流水线](#16-------)
+- [2. 工具集成与Jenkinsfile实践篇](#2------jenkinsfile---)
+  * [2.1 集成Kubernetes](#21---kubernetes)
+  * [2.2 制作tools镜像](#22---tools--)
+  * [2.3 修改Jenkinsfile](#23---jenkinsfile)
+
 #   1.  基于Kubernetes的Devops
 持续集成工具：
 - Jenkins
