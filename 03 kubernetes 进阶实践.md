@@ -140,6 +140,8 @@ Scheduler 提供的调度流程分为预选 (Predicates) 和优选 (Priorities) 
 ```
 kubectl cordon k8s-slave2
 kubectl drain k8s-slave2
+kubectl drain k8s-slave2 --delete-local-data=true --ignore-daemonsets=true  --force
+kubectl uncordon  k8s-slave2
 ```
 ## 2.4 NodeSelector节点选择器
 
