@@ -1,23 +1,23 @@
-- [1.  基于Kubernetes的Devops](#1-基于Kubernetes的Devops)
+- [1. 基于Kubernetes的Devops](#1-基于Kubernetes的Devops)
   * [1.1 DevOps、CI、CD介绍](#11-devops-ci-cd--)
   * [1.2 Jenkins初体验](#12-Jenkins初体验)
   * [1.3 安装gitlab](#13-安装gitlab)
-  * [1.4 Master-Slaves模式](#14-master-slaves--)
-    + [1.4.1 添加slave节点](#141---slave--)
-    + [1.4.2 执行java命令启动agent服务](#142---java----agent--)
-    + [1.4.3 Jenkins定制化容器](#143-jenkins-----)
-  * [1.5 流水线](#15----)
-    + [1.5.1 优化流水线部署](#151----------)
-    + [1.5.2 使用k8s部署服务](#152---k8s----)
-    + [1.5.3 使用凭据管理敏感信息](#153-----------)
-  * [1.6 多分支流水线](#16-------)
-- [2. 工具集成与Jenkinsfile实践篇](#2------jenkinsfile---)
-  * [2.1 集成Kubernetes](#21---kubernetes)
-  * [2.2 制作tools镜像](#22---tools--)
-  * [2.3 修改Jenkinsfile](#23---jenkinsfile)
-  * [2.4 集成sonarQube实现代码扫描](#24---sonarqube------)
-    + [2.4.1 sonarqube on kubernetes环境搭建](#241-sonarqube-on-kubernetes----)
-  * [2.5 集成到tools镜像中](#25----tools---)
+  * [1.4 Master-Slaves模式](#14-Master-Slaves模式)
+    + [1.4.1 添加slave节点](#141-添加slave节点)
+    + [1.4.2 执行java命令启动agent服务](#142-执行java命令启动agent服务)
+    + [1.4.3 Jenkins定制化容器](#143-Jenkins定制化容器)
+  * [1.5 流水线](#15-流水线)
+    + [1.5.1 优化流水线部署](#151-优化流水线部署)
+    + [1.5.2 使用k8s部署服务](#152-使用k8s部署服务)
+    + [1.5.3 使用凭据管理敏感信息](#153-使用凭据管理敏感信息)
+  * [1.6 多分支流水线](#16-多分支流水线)
+- [2. 工具集成与Jenkinsfile实践篇](#2-工具集成与Jenkinsfile实践篇)
+  * [2.1 集成Kubernetes](#21-集成Kubernetes)
+  * [2.2 制作tools镜像](#22-制作tools镜像)
+  * [2.3 修改Jenkinsfile](#23-修改Jenkinsfile)
+  * [2.4 集成sonarQube实现代码扫描](#24-集成sonarQube实现代码扫描)
+    + [2.4.1 sonarqube on kubernetes环境搭建](#241-sonarqube在kubernetes环境搭建)
+  * [2.5 集成到tools镜像中](#25-集成到tools镜像中)
   
 #   1.  基于Kubernetes的Devops
 持续集成工具：
@@ -1380,7 +1380,7 @@ Sonar可以从以下七个维度检测代码质量，而作为开发人员至少
 3. 执行完后，将分析报告被发送到SonarQube服务器进行处理
 4. SonarQube服务器处理和存储分析报告导致SonarQube数据库，并显示结果在UI中
 
-### 2.4.1 sonarqube on kubernetes环境搭建
+### 2.4.1 sonarqube在kubernetes环境搭建
 - 和gitlab共享postgres数据库
 - 使用ingress地址 `sonar.devops.com` 进行访问
 - 使用initContainers进行系统参数调整
