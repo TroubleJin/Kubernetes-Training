@@ -35,7 +35,7 @@
 - 实践Django项目的基于Jenkinsfile实现开发、测试环境的CI/CD
 
 ##  1.1 DevOps、CI、CD介绍
-![image](https://note.youdao.com/yws/res/15053/BC9149C8E30A4C82AC1934E4C6CB4FB5)
+![image](./img/day05-01.png)
 
 devops不是某一个具体的技术，而是一种思想+自动化能力，来使得构建、测试、发布软件能够更加地便捷、频繁和可靠的落地实践。本次课程核心内容就是要教会大家如何利用工具和技术来实现完整的DevOps平台的建设。我们主要使用的工具有：
 1. gitlab，代码仓库，企业内部使用最多的代码版本管理工具。
@@ -535,7 +535,7 @@ $ curl 'https://oapi.dingtalk.com/robot/send?access_token=b3a3e118a02e9223645659
 3. 获取AccessToken
 
    登录gitlab，选择user->Settings->access tokens新建一个访问token
-![image](https://note.youdao.com/yws/res/15141/62A5187CF64347D59109B01459673D19)
+![image](./img/day05-02.png)
 4. 配置host解析
 
    由于我们的Jenkins和gitlab域名是本地解析，因此需要让gitlab和Jenkins服务可以解析到对方的域名。两种方式：
@@ -560,8 +560,7 @@ $ curl 'https://oapi.dingtalk.com/robot/send?access_token=b3a3e118a02e9223645659
    - 生成一个Secret token
    - 保存
 
-![image](https://note.youdao.com/yws/res/15147/63940E395693443992277046C9C3308F)
-![image](https://note.youdao.com/yws/res/15157/9E05D0E37D864C26889DA6D80B9F4F0E)
+![image](./img/day05-03.png)
 6. 到gitlab配置webhook
 
    - 进入项目下settings->Integrations
@@ -570,15 +569,15 @@ $ curl 'https://oapi.dingtalk.com/robot/send?access_token=b3a3e118a02e9223645659
    - Add webhook
    - test push events，报错：Requests to the local network are not allowed 
 
-![image](https://note.youdao.com/yws/res/15175/F513DD102D194CA4A0BBBA529A4E8CFF)
-![image](https://note.youdao.com/yws/res/15178/ACEE9F65F87C4F06836CFCE859CE8DCD)
+
+![image](./img/day05-04.png)
 7. 设置gitlab允许向本地网络发送webhook请求
 
    访问 Admin Aera -> Settings -> Network ，展开Outbound requests
 
    Collapse，勾选第一项即可。再次test push events，成功。
 
-![image](https://note.youdao.com/yws/res/15186/8695759732E54E498E56716B3FFCAE1F)   
+![image](./img/day05-05.png)   
 
 8. 配置free项目，增加构建步骤，执行shell，将发送钉钉消息的shell保存
 
@@ -594,7 +593,7 @@ $ curl 'https://oapi.dingtalk.com/robot/send?access_token=b3a3e118a02e9223645659
 - 标签为任务选择节点的依据，如172.17.176.32
 - 启动方式选择通过java web启动代理，代理是运行jar包，通过JNLP（是一种允许客户端启动托管在远程Web服务器上的应用程序的协议 ）启动连接到master节点服务中
 执行java命令启动agent服务
-![image](https://note.youdao.com/yws/res/15202/CDA40B1E57A640598E0375FC56DD063B)
+![image](./img/day05-06.png)
 
 ### 1.4.2 执行java命令启动agent服务
 
@@ -609,7 +608,7 @@ jenkins   ClusterIP   10.100.40.112   <none>        8080/TCP,50000/TCP   3d12h
 [root@k8s-slave-1 ~]# java -jar agent.jar -jnlpUrl http://jenkins.devops.com/computer/k8s-slave-1/slave-agent.jnlp -secret 28722ad74d0a4e77d92b6f304b8ff368c135c8722a2ba04255cde9ed8ac86613 -workDir "/opt/jenkins_jobs"
 ```
 
-![image](https://note.youdao.com/yws/res/15205/5C67D8CAEB34440CB13AC7111C73DF36)
+![image](./img/day05-07.png)
 
 ###  1.4.3 Jenkins定制化容器
 
@@ -839,7 +838,7 @@ pipeline {
 
 - 配置webhook，实现myblog代码推送后，触发Jenkinsfile任务执行
 
-![image](https://note.youdao.com/yws/res/15238/6267E7A52BAE4967B9DD6C788B9D60AC)
+![image](./img/day05-08.png)
 
 ```
 pipeline {
@@ -1063,7 +1062,7 @@ Jenkins端创建多分支流水线项目
 - 高级克隆，设置浅克隆
 保存后，会自动检索项目中所有存在Jenkinsfile文件的分支和标签，若匹配我们设置的过滤正则表达式，则会添加到多分支的构建视图中。所有添加到视图中的分支和标签，会默认执行一次构建任务。
 
-![image](https://note.youdao.com/yws/res/15267/D76E2C1FD26341BF9F8D28A5676A5DA8)
+![image](./img/day05-09.png)
 ```
 pipeline {
     agent { label '172.17.176.32'}
@@ -1201,9 +1200,7 @@ pipeline {
    - 节点选择器：agent=true
    - 工作空间卷：选择hostpath，设置/opt/jenkins_jobs/,注意需要设置chown -R 1000:1000 /opt/jenkins_jobs/权限，否则Pod没有权限
  
-![image](https://note.youdao.com/yws/res/15276/83FF8ADC9641487587084E507C5D9BD2)
-
-![image](http://note.youdao.com/yws/res/15282/633A83E90E9148938D1975E61D2BA5E5)
+![image](./img/day05-10.png)
 
 ##  2.2 制作tools镜像
 ```
@@ -1237,8 +1234,7 @@ docker run -v /var/run/docker.sock:/var/run/docker.sock --rm -ti 172.17.176.31:5
 ```
 
 
-![image](http://note.youdao.com/yws/res/15295/A406F0899EF74EA689F58327C1541C1A)
-![image](http://note.youdao.com/yws/res/15292/E548B66B4E854E37B71AE78E74B9B576)
+![image](./img/day05-11.png)
 
 ##  2.3 修改Jenkinsfile
 ```
@@ -1371,7 +1367,7 @@ Sonar可以从以下七个维度检测代码质量，而作为开发人员至少
    通过sonar可以找出循环，展示包与包、类与类之间的相互依赖关系，可以检测自定义的架构规则 通过sonar可以管理第三方的jar包，可以利用LCOM4检测单个任务规则的应用情况， 检测耦合。
 
 
-![image](http://note.youdao.com/yws/res/15314/7FAE236387554B03BCAB1E6ABBBAC0CB)
+![image](./img/day05-13.png)
 
 1. CS架构
    - sonarqube scanner
@@ -1546,7 +1542,7 @@ sonar.host.url=http://sonar.devops.com
 ```
 sonar-scanner -X
 ```
-![image](http://note.youdao.com/yws/res/15336/9A96E79C195F4556AEBAA061A03F032E)
+![image](./img/day05-14.png)
 
 ##  2.5 集成到tools镜像中
 由于tools已经集成了java环境，因此可以直接剔除scanner自带的jre
